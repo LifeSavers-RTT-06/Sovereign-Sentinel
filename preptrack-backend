@@ -1,0 +1,6 @@
+preptrack-backend/
+├── get_supplies.py       ✅ Fetches all items for a household
+├── post_supplies.py      ✅ Adds a new item
+├── put_supplies.py       ✅ Updates an existing item
+├── delete_supplies.py    ✅ Removes an item
+└── expiry_scanner.py     ✅ Finds expiring items and fires email alert
