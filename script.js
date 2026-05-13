@@ -121,7 +121,7 @@ function handleDemoFormSubmit(event) {
   });
 
   renderInventory();
-  setInventoryPanelExpanded(true);
+  setInventoryPanelExpanded(false);
   event.target.reset();
 
   document.getElementById("inventory").scrollIntoView({ behavior: "smooth" });
