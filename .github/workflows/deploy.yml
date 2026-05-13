@@ -1,25 +1,24 @@
-
 name: Deploy Static Site to S3
 
 on:
-  push:
-    branches:
-      - main # Triggers the deploy every time code is pushed to the main branch
+  push:
+    branches:
+      - main
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AKIATPXG5Z3S33532MX3 }}
-        aws-secret-access-key: ${{ secrets.Vj6/umLSQxF2IAje4TRThWZgz+2bPeeEkgaT4EPp}}
-        aws-region: us-east-2 # Change to your bucket's region
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-2
 
-    - name: Sync Files to S3
-      run: |
-        aws s3 sync . s3://${{ secrets.sovereign-sentinel-frontend }} --delete --exclude ".git*" --exclude ".github*"
+    - name: Sync Files to S3
+      run: |
+        aws s3 sync . s3://${{ secrets.AWS_S3_BUCKET }} --delete --exclude ".git*" --exclude ".github*"
