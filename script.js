@@ -9,7 +9,7 @@ const demoSupplies = [
   },
   {
     item: "Bottled Water",
-    category: "Food",
+    category: "Water",
     quantity: "12 gallons",
     expiration: "2026-06-01",
     status: "Watch",
@@ -33,6 +33,11 @@ const demoSupplies = [
   }
 ];
 
+function updateInventoryCount(filteredCount) {
+  const count = document.getElementById("inventory-count");
+  count.textContent = `${filteredCount} ${filteredCount === 1 ? "item" : "items"}`;
+}
+
 function renderInventory() {
   const list = document.getElementById("inventory-list");
   const filter = document.getElementById("category-filter").value;
@@ -41,6 +46,8 @@ function renderInventory() {
   const filteredSupplies = filter === "All"
     ? demoSupplies
     : demoSupplies.filter((supply) => supply.category === filter);
+
+  updateInventoryCount(filteredSupplies.length);
 
   filteredSupplies.forEach((supply) => {
     const card = document.createElement("article");
@@ -73,6 +80,23 @@ function renderInventory() {
   }
 }
 
+function setInventoryPanelExpanded(isExpanded) {
+  const toggle = document.getElementById("inventory-toggle");
+  const panel = document.getElementById("inventory-panel");
+  const icon = document.getElementById("inventory-toggle-icon");
+
+  toggle.setAttribute("aria-expanded", String(isExpanded));
+  panel.hidden = !isExpanded;
+  icon.textContent = isExpanded ? "⌃" : "⌄";
+}
+
+function toggleInventoryPanel() {
+  const toggle = document.getElementById("inventory-toggle");
+  const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+
+  setInventoryPanelExpanded(!isExpanded);
+}
+
 function handleDemoFormSubmit(event) {
   event.preventDefault();
 
@@ -97,6 +121,7 @@ function handleDemoFormSubmit(event) {
   });
 
   renderInventory();
+  setInventoryPanelExpanded(true);
   event.target.reset();
 
   document.getElementById("inventory").scrollIntoView({ behavior: "smooth" });
@@ -108,6 +133,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("category-filter")
     .addEventListener("change", renderInventory);
+
+  document
+    .getElementById("inventory-toggle")
+    .addEventListener("click", toggleInventoryPanel);
 
   document
     .getElementById("add-supply-form")
