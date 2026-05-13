@@ -1,4 +1,4 @@
-yaml
+
 name: Deploy Static Site to S3
 
 on:
