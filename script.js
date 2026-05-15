@@ -30,6 +30,22 @@ const demoSupplies = [
     expiration: "2026-08-15",
     status: "Good",
     statusClass: "status-good"
+  },
+  {
+    item: "Toilet Paper",
+    category: "Other",
+    quantity: "12 rolls",
+    expiration: "2027-01-15",
+    status: "Good",
+    statusClass: "status-good"
+  },
+  {
+    item: "Disinfecting Wipes",
+    category: "Other",
+    quantity: "4 packs",
+    expiration: "2026-07-01",
+    status: "Good",
+    statusClass: "status-good"
   }
 ];
 
