@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest"
+    "vite": "latest",
     "rollup": "latest"
   }
 }
