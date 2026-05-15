@@ -9,12 +9,12 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.1.1",
-    "vite": "^7.1.4",
-    "rollup": "^4.53.3"
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest"
+    "rollup": "latest"
   }
 }
