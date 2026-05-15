@@ -97,7 +97,7 @@
           id="inventory-toggle"
           type="button"
           class="inventory-toggle"
-          aria-expanded="true"
+          aria-expanded="false"
           aria-controls="inventory-panel"
         >
           <span>
@@ -108,11 +108,11 @@
             <span id="inventory-count" class="rounded-full bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1">
               0 items
             </span>
-            <span id="inventory-toggle-icon" class="inventory-toggle-icon" aria-hidden="true">⌃</span>
+            <span id="inventory-toggle-icon" class="inventory-toggle-icon" aria-hidden="true">v</span>
           </span>
         </button>
 
-        <div id="inventory-panel" class="inventory-panel space-y-3">
+        <div id="inventory-panel" class="inventory-panel space-y-3 hidden">
           <div class="flex justify-end">
             <label class="sr-only" for="category-filter">Filter inventory by category</label>
             <select id="category-filter" class="text-sm rounded-xl border-slate-300 bg-white">
