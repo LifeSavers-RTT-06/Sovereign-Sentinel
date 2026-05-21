@@ -24,7 +24,6 @@
 
 
 
-
 Expiry Scanner System Integration
 
 The Expiry Scanner is an internal automated worker designed to track household inventory lifecycles and push proactive alerts.
