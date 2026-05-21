@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState } from 'react';
+import { Authenticator } from '@aws-amplify/ui-react';
 import AddSupplyForm from './components/AddSupplyForm.jsx';
 import AlertBanner from './components/AlertBanner.jsx';
 import BottomNav from './components/BottomNav.jsx';
@@ -73,23 +74,30 @@ export default function App() {
   };
 
   return (
-    <>
-      <div className="app-shell">
-        <Header />
+    <Authenticator>
+      {({ signOut, user }) => (
+        <>
+          <div className="app-shell">
+            <Header
+              userLabel={user?.signInDetails?.loginId ?? user?.username ?? 'Authenticated User'}
+              onSignOut={signOut}
+            />
 
-        <main className="shell main-content">
-          <section id="dashboard" className="dashboard-stack" aria-label="Dashboard overview">
-            <AlertBanner urgentCount={3} />
-            <SummaryCards />
-          </section>
+            <main className="shell main-content">
+              <section id="dashboard" className="dashboard-stack" aria-label="Dashboard overview">
+                <AlertBanner urgentCount={3} />
+                <SummaryCards />
+              </section>
 
-          <InventoryList supplies={supplies} />
-          <AddSupplyForm onAddSupply={addSupply} />
-          <HouseholdProfile />
-        </main>
-      </div>
+              <InventoryList supplies={supplies} />
+              <AddSupplyForm onAddSupply={addSupply} />
+              <HouseholdProfile />
+            </main>
+          </div>
 
-      <BottomNav />
-    </>
+          <BottomNav />
+        </>
+      )}
+    </Authenticator>
   );
 }
