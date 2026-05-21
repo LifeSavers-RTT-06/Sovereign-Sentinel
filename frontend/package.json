@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "aws-amplify": "^6.13.2",
+    "@aws-amplify/ui-react": "^6.10.2"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "rollup": "latest"
+    "vite": "latest"
   }
 }
