@@ -16,8 +16,9 @@ const amplifyConfig = {
       userPoolClientId,
       loginWith: {
         email: true,
-    },
-  },
+      }
+    }
+  }
 };
 
 Amplify.configure(amplifyConfig);
