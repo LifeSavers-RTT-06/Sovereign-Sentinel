@@ -1,3 +1,30 @@
+[ Static Frontend Web Assets ] ──> Hosted on Amazon S3 ──> Accelerated via Amazon CloudFront (HTTPS)
+                                                                 │
+                                                    (Secure HTTPS REST Calls)
+                                                                 │
+                                                                 ▼
+                                                    [ Amazon API Gateway ]
+                                                                 │
+                                            ┌────────────────────┴────────────────────┐
+                                            ▼                                         ▼
+                             [ Cognito User Pool Authorizer ]             [ Backend Routes Engine ]
+                                    (Token Validation)                      • GET /supplies ➔ Lambda
+                                            │                               • POST /supplies ➔ Lambda
+                                            │                               • PUT /supplies/{id} ➔ Lambda
+                                            ▼                               • DELETE /supplies/{id} ➔ Lambda
+                                   [ Valid / Invalid ]                                │
+                                            │                                         │
+                    ┌───────────────────────┴───────────────────────┐                 │
+                    ▼                                               ▼                 ▼
+             [ 401 Unauthorized ]                         [ 200/201 Approved ] ➔ [ Data Engine ]
+             (Connection Dropped)                        (Execute Operations)         │
+                                                                                      ▼
+                                                                           [ DynamoDB Supplies Table ]
+
+
+
+
+
 Expiry Scanner System Integration
 
 The Expiry Scanner is an internal automated worker designed to track household inventory lifecycles and push proactive alerts.
