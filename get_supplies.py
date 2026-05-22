@@ -8,12 +8,10 @@ table = dynamodb.Table(os.environ['SUPPLIES_TABLE'])
 
 def lambda_handler(event, context):
     try:
-        # Get the user ID from the authenticated request
         user_id = event['requestContext']['authorizer']['claims']['sub']
         
-        # Query all supplies for this household
         response = table.query(
-            KeyConditionExpression=Key('userID').eq(user_id)
+            KeyConditionExpression=Key('userId').eq(user_id)
         )
         
         return {
