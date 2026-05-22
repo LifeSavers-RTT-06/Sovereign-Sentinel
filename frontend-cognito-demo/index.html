@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrepTrack | Emergency Preparedness Tracker</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/flowbite@4.0.1/dist/flowbite.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+  
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md space-y-4">
+      <div class="text-center">
+        <h1 class="text-3xl font-bold">PrepTrack</h1>
+        <p class="text-slate-600 mt-2 text-sm">Emergency Preparedness Tracker</p>
+      </div>
+
+      <div id="login-form" class="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+        <h2 class="text-xl font-bold mb-4">Sign In</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Email</label>
+            <input id="login-email" type="email" class="mobile-input" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+            <input id="login-password" type="password" class="mobile-input" />
+          </div>
+          <button onclick="handleLogin()" class="w-full min-h-12 rounded-xl bg-blue-700 text-white font-semibold hover:bg-blue-800">Sign In</button>
+          <p class="text-center text-sm text-slate-600">
+            Don't have an account? <button onclick="showSignup()" class="text-blue-700 font-semibold">Sign Up</button>
+          </p>
+        </div>
+        <div id="login-error" class="hidden mt-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm"></div>
+      </div>
+
+      <div id="signup-form" class="hidden rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+        <h2 class="text-xl font-bold mb-4">Create Account</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Email</label>
+            <input id="signup-email" type="email" class="mobile-input" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Password (min 8 characters)</label>
+            <input id="signup-password" type="password" class="mobile-input" />
+          </div>
+          <button onclick="handleSignup()" class="w-full min-h-12 rounded-xl bg-blue-700 text-white font-semibold hover:bg-blue-800">Create Account</button>
+          <p class="text-center text-sm text-slate-600">
+            Already have an account? <button onclick="showLogin()" class="text-blue-700 font-semibold">Sign In</button>
+          </p>
+        </div>
+        <div id="signup-error" class="hidden mt-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm"></div>
+      </div>
+
+      <div id="verify-form" class="hidden rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+        <h2 class="text-xl font-bold mb-4">Verify Your Email</h2>
+        <p class="text-sm text-slate-600 mb-4">We sent a code to <span id="verify-email" class="font-semibold"></span></p>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Verification Code</label>
+            <input id="verify-code" type="text" class="mobile-input" placeholder="123456" />
+          </div>
+          <button onclick="handleVerify()" class="w-full min-h-12 rounded-xl bg-blue-700 text-white font-semibold hover:bg-blue-800">Verify Email</button>
+        </div>
+        <div id="verify-error" class="hidden mt-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-screen" class="hidden min-h-screen pb-24 md:pb-8">
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+      <div class="max-w-4xl mx-auto px-4 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-medium text-blue-700 uppercase tracking-wide">Emergency Preparedness</p>
+            <h1 class="text-2xl font-bold tracking-tight">Prep Tracking</h1>
+          </div>
+          <button onclick="handleLogout()" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200">Sign Out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-5 space-y-5">
+      <section id="inventory" class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <button id="inventory-toggle" type="button" class="inventory-toggle" aria-expanded="false">
+          <span>
+            <span class="block text-xl font-bold text-slate-900">Inventory</span>
+            <span class="block text-sm text-slate-500 mt-1">Your emergency supplies</span>
+          </span>
+          <span class="flex items-center gap-3">
+            <span id="inventory-count" class="rounded-full bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1">0 items</span>
+            <span id="inventory-toggle-icon" class="inventory-toggle-icon">⌄</span>
+          </span>
+        </button>
+
+        <div id="inventory-panel" class="inventory-panel space-y-3" hidden>
+          <div class="flex justify-end">
+            <select id="category-filter" class="text-sm rounded-xl border-slate-300 bg-white">
+              <option value="All">All</option>
+              <option value="Food">Food</option>
+              <option value="Water">Water</option>
+              <option value="Fuel">Fuel</option>
+              <option value="Medicine">Medicine</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="inventory-list" class="space-y-3"></div>
+        </div>
+      </section>
+
+      <section id="add-supply" class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+        <h2 class="text-xl font-bold">Add Supply</h2>
+        <p class="text-sm text-slate-500 mt-1 mb-4">Add items to your inventory</p>
+        <form id="add-supply-form" class="space-y-4">
+          <div>
+            <label class="block mb-2 text-sm font-medium text-slate-700">Item name</label>
+            <input id="item-name" type="text" placeholder="Canned beans" class="mobile-input" />
+          </div>
+          <div>
+            <label class="block mb-2 text-sm font-medium text-slate-700">Category</label>
+            <select id="category" class="mobile-input">
+              <option>Food</option>
+              <option>Water</option>
+              <option>Fuel</option>
+              <option>Medicine</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block mb-2 text-sm font-medium text-slate-700">Quantity</label>
+              <input id="quantity" type="number" placeholder="6" class="mobile-input" />
+            </div>
+            <div>
+              <label class="block mb-2 text-sm font-medium text-slate-700">Unit</label>
+              <input id="unit" type="text" placeholder="cans" class="mobile-input" />
+            </div>
+          </div>
+          <div>
+            <label class="block mb-2 text-sm font-medium text-slate-700">Expiration date</label>
+            <input id="expiration" type="date" class="mobile-input" />
+          </div>
+          <button type="submit" class="w-full min-h-12 rounded-xl bg-blue-700 text-white font-semibold hover:bg-blue-800">Add Supply</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@4.0.1/dist/flowbite.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
