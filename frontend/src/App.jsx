@@ -32,18 +32,60 @@ const demoSupplies = [
   },
 ];
 
+function formatQuantity(quantity, unit) {
+  if (quantity === undefined || quantity === null || quantity === '') {
+    return 'N/A';
+  }
+
+  const quantityText = String(quantity);
+  const unitText = unit ? String(unit).trim() : '';
+  return unitText ? `${quantityText} ${unitText}` : quantityText;
+}
+
+function getSupplyStatus(expirationDate) {
+  const parsedExpirationDate = parseExpirationDate(expirationDate);
+
+  if (!parsedExpirationDate) {
+    return { status: 'Unknown', statusClass: 'status-warning' };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (parsedExpirationDate < today) {
+    return { status: 'Expired', statusClass: 'status-danger' };
+  }
+
+  const urgentCutoff = new Date(today);
+  urgentCutoff.setDate(today.getDate() + 14);
+
+  if (parsedExpirationDate <= urgentCutoff) {
+    return { status: 'Expires Soon', statusClass: 'status-danger' };
+  }
+
+  const watchCutoff = new Date(today);
+  watchCutoff.setDate(today.getDate() + 30);
+
+  if (parsedExpirationDate <= watchCutoff) {
+    return { status: 'Watch', statusClass: 'status-warning' };
+  }
+
+  return { status: 'Good', statusClass: 'status-good' };
+}
+
 function toUiSupply(supply) {
   const expirationDate = supply.expirationDate ?? supply.expiration ?? '9999-12-31';
+  const { status, statusClass } = getSupplyStatus(expirationDate);
 
   return {
     id: supply.itemID ?? supply.id ?? crypto.randomUUID(),
-    item: supply.item ?? supply.name ?? 'Unnamed Item',
+    item: supply.itemName ?? supply.item ?? supply.name ?? 'Unnamed Item',
     category: supply.category ?? 'Other',
-    quantity: supply.quantity ?? 'N/A',
+    quantity: formatQuantity(supply.quantity, supply.unit),
     expiration: expirationDate,
     expirationDate,
-    status: supply.status ?? 'Good',
-    statusClass: supply.statusClass ?? 'status-good',
+    status,
+    statusClass,
   };
 }
 
@@ -95,7 +137,7 @@ export default function App() {
       } catch (error) {
         console.error('Failed to load supplies:', error);
         setApiError('Unable to load live supplies right now. Showing demo data instead.');
-        setSupplies(demoSupplies);
+        setSupplies(demoSupplies.map(toUiSupply));
       } finally {
         setIsLoadingSupplies(false);
       }
@@ -109,11 +151,14 @@ export default function App() {
   const addSupply = async (supply) => {
     try {
       const createdSupply = await createSupply(supply);
-      setSupplies((currentSupplies) => [toUiSupply(createdSupply ?? supply), ...currentSupplies]);
+      setSupplies((currentSupplies) => [
+        toUiSupply({ ...supply, ...(createdSupply ?? {}) }),
+        ...currentSupplies,
+      ]);
     } catch (error) {
       console.error('Failed to create supply:', error);
       setApiError('Unable to save supply to API. Added locally only for this session.');
-      setSupplies((currentSupplies) => [supply, ...currentSupplies]);
+      setSupplies((currentSupplies) => [toUiSupply(supply), ...currentSupplies]);
     }
   };
 
