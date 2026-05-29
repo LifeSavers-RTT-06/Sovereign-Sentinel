@@ -17,7 +17,7 @@ export default function AddSupplyForm({ onAddSupply }) {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!form.item.trim() || !form.quantity || !form.unit.trim() || !form.expiration) {
@@ -25,16 +25,18 @@ export default function AddSupplyForm({ onAddSupply }) {
       return;
     }
 
-    onAddSupply({
+    const didAddSupply = await onAddSupply({
       itemName: form.item.trim(),
       category: form.category,
-      quantity: Number(form.quantity),
+      quantity: form.quantity,
       unit: form.unit.trim(),
       expirationDate: form.expiration,
     });
 
-    setForm(initialForm);
-    document.getElementById('inventory')?.scrollIntoView({ behavior: 'smooth' });
+    if (didAddSupply) {
+      setForm(initialForm);
+      document.getElementById('inventory')?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
