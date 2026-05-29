@@ -29,16 +29,26 @@ async function apiRequest(path, options = {}) {
     ...options,
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Request failed with status ${response.status}`);
+    let errorMessage = responseText;
+
+    try {
+      const errorBody = responseText ? JSON.parse(responseText) : null;
+      errorMessage = errorBody?.error ?? errorBody?.message ?? responseText;
+    } catch {
+      // Keep the original response text when the API does not return JSON.
+    }
+
+    throw new Error(errorMessage || `Request failed with status ${response.status}`);
   }
 
-  if (response.status === 204) {
+  if (!responseText || response.status === 204) {
     return null;
   }
 
-  return response.json();
+  return JSON.parse(responseText);
 }
 
 export async function getSupplies() {

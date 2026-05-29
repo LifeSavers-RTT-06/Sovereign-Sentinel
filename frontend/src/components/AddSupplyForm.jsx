@@ -17,33 +17,33 @@ export default function AddSupplyForm({ onAddSupply }) {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!form.item.trim() || !form.quantity || !form.unit.trim() || !form.expiration) {
-      window.alert('Please fill in all fields before adding a demo item.');
+      window.alert('Please fill in all fields before adding a supply.');
       return;
     }
 
-    onAddSupply({
-      id: crypto.randomUUID(),
-      item: form.item.trim(),
+    const didAddSupply = await onAddSupply({
+      itemName: form.item.trim(),
       category: form.category,
-      quantity: `${form.quantity} ${form.unit.trim()}`,
-      expiration: form.expiration,
-      status: 'New',
-      statusClass: 'status-good',
+      quantity: form.quantity,
+      unit: form.unit.trim(),
+      expirationDate: form.expiration,
     });
 
-    setForm(initialForm);
-    document.getElementById('inventory')?.scrollIntoView({ behavior: 'smooth' });
+    if (didAddSupply) {
+      setForm(initialForm);
+      document.getElementById('inventory')?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
     <section id="add-supply" className="panel form-panel" aria-labelledby="add-supply-heading">
       <h2 id="add-supply-heading">Add Supply</h2>
       <p className="section-description">
-        Static demo form. Later, this can send data to API Gateway and Lambda.
+        Add supplies to your household inventory.
       </p>
 
       <form className="supply-form" onSubmit={handleSubmit}>
@@ -111,7 +111,7 @@ export default function AddSupplyForm({ onAddSupply }) {
         </div>
 
         <button type="submit" className="primary-button">
-          Add Demo Item
+          Add Supply
         </button>
       </form>
     </section>
