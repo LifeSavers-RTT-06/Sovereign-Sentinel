@@ -1,12 +1,20 @@
 import React from 'react';
-const cards = [
-  { label: 'Total', value: '24', helper: 'Supplies' },
-  { label: 'Urgent', value: '3', helper: 'Expiring soon', tone: 'danger' },
-  { label: 'Food', value: '5', helper: 'Days covered' },
-  { label: 'Household', value: '4', helper: 'People' },
-];
 
-export default function SummaryCards() {
+export default function SummaryCards({ supplies, urgentSupplyCount }) {
+  const foodSupplyCount = supplies.filter((supply) => supply.category === 'Food').length;
+  const categoryCount = new Set(supplies.map((supply) => supply.category).filter(Boolean)).size;
+  const cards = [
+    { label: 'Total', value: supplies.length.toString(), helper: 'Supplies' },
+    {
+      label: 'Urgent',
+      value: urgentSupplyCount.toString(),
+      helper: 'Expiring soon',
+      tone: 'danger',
+    },
+    { label: 'Food', value: foodSupplyCount.toString(), helper: 'Food supplies' },
+    { label: 'Categories', value: categoryCount.toString(), helper: 'Supply types' },
+  ];
+
   return (
     <>
       <section className="summary-grid" aria-label="Preparedness summary">
@@ -25,8 +33,11 @@ export default function SummaryCards() {
         <div>
           <h2 id="readiness-heading">Readiness Gap</h2>
           <p>
-            Your current food inventory covers <strong>5 days</strong>. Your 14-day goal is
-            missing <strong className="danger-text"> 9 days</strong>.
+            {foodSupplyCount > 0
+              ? `Your current food inventory includes ${foodSupplyCount} food ${
+                  foodSupplyCount === 1 ? 'supply' : 'supplies'
+                }. Review quantities against your 14-day goal.`
+              : 'No food supplies are currently recorded. Add food inventory to compare against your 14-day goal.'}
           </p>
         </div>
         <span className="restock-pill">Restock</span>
