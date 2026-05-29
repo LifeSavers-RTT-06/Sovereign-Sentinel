@@ -36,8 +36,8 @@ export default function SummaryCards({ supplies, urgentSupplyCount }) {
             {foodSupplyCount > 0
               ? `Your current food inventory includes ${foodSupplyCount} food ${
                   foodSupplyCount === 1 ? 'supply' : 'supplies'
-                }. Review quantities against your 14-day goal.`
-              : 'No food supplies are currently recorded. Add food inventory to compare against your 14-day goal.'}
+                }. Review quantities against your preparedness goal.`
+              : 'No food supplies are currently recorded. Add food inventory to compare against your preparedness goal.'}
           </p>
         </div>
         <span className="restock-pill">Restock</span>
