@@ -12,7 +12,7 @@ export class AuthSessionNotReadyError extends Error {
 
 function logDevelopment(message, ...details) {
   if (isDevelopment) {
-    console.info(`[suppliesApi] ${message}`, ...details);
+    console.info(`[api] ${message}`, ...details);
   }
 }
 
@@ -43,10 +43,10 @@ async function apiRequest(path, options = {}) {
 
   const method = options.method ?? 'GET';
   const token = await getAuthToken();
-  const isGetSupplies = method === 'GET' && path === '/supplies';
+  const shouldLogRequest = method === 'GET' && ['/supplies', '/profile'].includes(path);
 
-  if (isGetSupplies) {
-    logDevelopment('GET /supplies request started');
+  if (shouldLogRequest) {
+    logDevelopment(`${method} ${path} request started`);
   }
 
   try {
@@ -74,8 +74,8 @@ async function apiRequest(path, options = {}) {
       throw new Error(errorMessage || `Request failed with status ${response.status}`);
     }
 
-    if (isGetSupplies) {
-      logDevelopment('GET /supplies succeeded', { status: response.status });
+    if (shouldLogRequest) {
+      logDevelopment(`${method} ${path} succeeded`, { status: response.status });
     }
 
     if (!responseText || response.status === 204) {
@@ -84,8 +84,8 @@ async function apiRequest(path, options = {}) {
 
     return JSON.parse(responseText);
   } catch (error) {
-    if (isGetSupplies) {
-      logDevelopment('GET /supplies failed', error);
+    if (shouldLogRequest) {
+      logDevelopment(`${method} ${path} failed`, error);
     }
 
     throw error;
@@ -112,4 +112,15 @@ export async function updateSupply(itemID, updates) {
 
 export async function deleteSupply(itemID) {
   return apiRequest(`/supplies/${itemID}`, { method: 'DELETE' });
+}
+
+export async function getProfile() {
+  return apiRequest('/profile', { method: 'GET' });
+}
+
+export async function updateProfile(profile) {
+  return apiRequest('/profile', {
+    method: 'PUT',
+    body: JSON.stringify(profile),
+  });
 }
