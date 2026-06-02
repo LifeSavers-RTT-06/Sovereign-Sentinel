@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
+import { authenticatorComponents, authenticatorFormFields } from './authenticatorConfig.jsx';
 import AddSupplyForm from './components/AddSupplyForm.jsx';
 import AlertBanner from './components/AlertBanner.jsx';
 import BottomNav from './components/BottomNav.jsx';
@@ -234,7 +235,7 @@ export default function App() {
   };
 
   return (
-    <Authenticator>
+    <Authenticator components={authenticatorComponents} formFields={authenticatorFormFields}>
       {({ signOut, user }) => (
         <>
           <div className="app-shell">

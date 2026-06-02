@@ -688,3 +688,50 @@ p {
     display: none;
   }
 }
+
+[data-amplify-authenticator] {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(29, 78, 216, 0.12), transparent 28rem),
+    #f8fafc;
+}
+
+[data-amplify-authenticator] [data-amplify-router] {
+  width: min(100% - 2rem, 28rem);
+  margin: 1rem auto;
+  border-radius: 1.25rem;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14);
+}
+
+.auth-reset-footer {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.25rem 1rem 1.25rem;
+  text-align: center;
+}
+
+.auth-reset-footer p {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.auth-reset-link {
+  width: fit-content;
+  justify-self: center;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: #1d4ed8;
+  font-weight: 800;
+  padding: 0.45rem 0.75rem;
+}
+
+.auth-reset-link:hover {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.auth-reset-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
