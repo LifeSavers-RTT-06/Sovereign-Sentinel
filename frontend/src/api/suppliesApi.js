@@ -1,13 +1,36 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const isDevelopment = import.meta.env.DEV;
+
+export class AuthSessionNotReadyError extends Error {
+  constructor(message = 'Cognito auth session is not ready yet.') {
+    super(message);
+    this.name = 'AuthSessionNotReadyError';
+  }
+}
+
+function logDevelopment(message, ...details) {
+  if (isDevelopment) {
+    console.info(`[suppliesApi] ${message}`, ...details);
+  }
+}
 
 async function getAuthToken() {
-  const session = await fetchAuthSession();
+  let session;
+
+  try {
+    session = await fetchAuthSession();
+  } catch (error) {
+    logDevelopment('auth session not ready', error);
+    throw new AuthSessionNotReadyError('Cognito auth session is still being restored.');
+  }
+
   const token = session?.tokens?.idToken?.toString() ?? session?.tokens?.accessToken?.toString();
 
   if (!token) {
-    throw new Error('Unable to retrieve Cognito auth token.');
+    logDevelopment('auth session not ready: no Cognito token was returned');
+    throw new AuthSessionNotReadyError('Cognito auth token is not available yet.');
   }
 
   return token;
@@ -18,37 +41,55 @@ async function apiRequest(path, options = {}) {
     throw new Error('VITE_API_BASE_URL is not configured.');
   }
 
+  const method = options.method ?? 'GET';
   const token = await getAuthToken();
+  const isGetSupplies = method === 'GET' && path === '/supplies';
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      Authorization: token,
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.headers ?? {}),
-    },
-    ...options,
-  });
+  if (isGetSupplies) {
+    logDevelopment('GET /supplies request started');
+  }
 
-  const responseText = await response.text();
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        Authorization: token,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers ?? {}),
+      },
+      ...options,
+    });
 
-  if (!response.ok) {
-    let errorMessage = responseText;
+    const responseText = await response.text();
 
-    try {
-      const errorBody = responseText ? JSON.parse(responseText) : null;
-      errorMessage = errorBody?.error ?? errorBody?.message ?? responseText;
-    } catch {
-      // Keep the original response text when the API does not return JSON.
+    if (!response.ok) {
+      let errorMessage = responseText;
+
+      try {
+        const errorBody = responseText ? JSON.parse(responseText) : null;
+        errorMessage = errorBody?.error ?? errorBody?.message ?? responseText;
+      } catch {
+        // Keep the original response text when the API does not return JSON.
+      }
+
+      throw new Error(errorMessage || `Request failed with status ${response.status}`);
     }
 
-    throw new Error(errorMessage || `Request failed with status ${response.status}`);
-  }
+    if (isGetSupplies) {
+      logDevelopment('GET /supplies succeeded', { status: response.status });
+    }
 
-  if (!responseText || response.status === 204) {
-    return null;
-  }
+    if (!responseText || response.status === 204) {
+      return null;
+    }
 
-  return JSON.parse(responseText);
+    return JSON.parse(responseText);
+  } catch (error) {
+    if (isGetSupplies) {
+      logDevelopment('GET /supplies failed', error);
+    }
+
+    throw error;
+  }
 }
 
 export async function getSupplies() {

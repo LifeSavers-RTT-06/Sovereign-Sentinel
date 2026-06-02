@@ -8,7 +8,13 @@ import Header from './components/Header.jsx';
 import HouseholdProfile from './components/HouseholdProfile.jsx';
 import InventoryList from './components/InventoryList.jsx';
 import SummaryCards from './components/SummaryCards.jsx';
-import { createSupply, deleteSupply, getSupplies, updateSupply } from './api/suppliesApi.js';
+import {
+  AuthSessionNotReadyError,
+  createSupply,
+  deleteSupply,
+  getSupplies,
+  updateSupply,
+} from './api/suppliesApi.js';
 
 const demoSupplies = [
   {
@@ -141,31 +147,86 @@ function getUrgentSupplyCount(supplies) {
   }).length;
 }
 
-export default function App() {
+function delay(milliseconds) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
+
+function getAuthenticatedUserKey(user) {
+  return user?.userId ?? user?.username ?? user?.signInDetails?.loginId ?? '';
+}
+
+function AuthenticatedDashboard({ signOut, user }) {
   const [supplies, setSupplies] = useState([]);
   const [isLoadingSupplies, setIsLoadingSupplies] = useState(true);
   const [apiError, setApiError] = useState('');
 
+  const authenticatedUserKey = getAuthenticatedUserKey(user);
+
   useEffect(() => {
+    let isCurrentLoad = true;
+
     const loadSupplies = async () => {
+      if (!authenticatedUserKey) {
+        setSupplies([]);
+        setApiError('Waiting for your authenticated user profile before loading supplies…');
+        setIsLoadingSupplies(true);
+        return;
+      }
+
       setIsLoadingSupplies(true);
       setApiError('');
 
-      try {
-        const data = await getSupplies();
-        const normalizedSupplies = Array.isArray(data) ? data.map(toUiSupply) : [];
-        setSupplies(normalizedSupplies);
-      } catch (error) {
-        console.error('Failed to load supplies:', error);
-        setApiError('Unable to load live supplies right now. Showing demo data instead.');
-        setSupplies(demoSupplies.map(toUiSupply));
-      } finally {
-        setIsLoadingSupplies(false);
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const data = await getSupplies();
+
+          if (!isCurrentLoad) {
+            return;
+          }
+
+          const liveSupplies = Array.isArray(data) ? data : [];
+          setSupplies(liveSupplies.map(toUiSupply));
+          setApiError('');
+          setIsLoadingSupplies(false);
+          return;
+        } catch (error) {
+          if (!isCurrentLoad) {
+            return;
+          }
+
+          if (error instanceof AuthSessionNotReadyError && attempt === 0) {
+            console.info('Auth session not ready; retrying supplies load after sign-in.', error);
+            setApiError('Finishing sign-in and preparing your supplies…');
+            await delay(600);
+            continue;
+          }
+
+          console.error('Failed to load supplies:', error);
+
+          if (error instanceof AuthSessionNotReadyError) {
+            setSupplies([]);
+            setApiError(
+              'Your sign-in session is still being restored. Please wait a moment and refresh if supplies do not load.',
+            );
+          } else {
+            setApiError('Unable to load live supplies right now. Showing demo data instead.');
+            setSupplies(demoSupplies.map(toUiSupply));
+          }
+
+          setIsLoadingSupplies(false);
+          return;
+        }
       }
     };
 
     loadSupplies();
-  }, []);
+
+    return () => {
+      isCurrentLoad = false;
+    };
+  }, [authenticatedUserKey]);
 
   const urgentSupplyCount = useMemo(() => getUrgentSupplyCount(supplies), [supplies]);
 
@@ -235,40 +296,44 @@ export default function App() {
   };
 
   return (
-    <Authenticator components={authenticatorComponents} formFields={authenticatorFormFields}>
-      {({ signOut, user }) => (
-        <>
-          <div className="app-shell">
-            <Header
-              userLabel={user?.signInDetails?.loginId ?? user?.username ?? 'Authenticated User'}
-              onSignOut={signOut}
+    <>
+      <div className="app-shell">
+        <Header
+          userLabel={user?.signInDetails?.loginId ?? user?.username ?? 'Authenticated User'}
+          onSignOut={signOut}
+        />
+
+        <main className="shell main-content">
+          <section id="dashboard" className="dashboard-stack" aria-label="Dashboard overview">
+            {apiError && (
+              <div className="panel error-panel" role="alert">
+                {apiError}
+              </div>
+            )}
+            {isLoadingSupplies && <div className="panel loading-panel">Loading supplies…</div>}
+            <AlertBanner urgentCount={urgentSupplyCount} />
+            <SummaryCards supplies={supplies} urgentSupplyCount={urgentSupplyCount} />
+            <HouseholdProfile
+              storageKey={`sovereign-sentinel:household-profile:${
+                user?.userId ?? user?.username ?? 'authenticated-user'
+              }`}
             />
+          </section>
 
-            <main className="shell main-content">
-              <section id="dashboard" className="dashboard-stack" aria-label="Dashboard overview">
-                {apiError && (
-                  <div className="panel error-panel" role="alert">
-                    {apiError}
-                  </div>
-                )}
-                {isLoadingSupplies && <div className="panel loading-panel">Loading supplies…</div>}
-                <AlertBanner urgentCount={urgentSupplyCount} />
-                <SummaryCards supplies={supplies} urgentSupplyCount={urgentSupplyCount} />
-                <HouseholdProfile
-                  storageKey={`sovereign-sentinel:household-profile:${
-                    user?.userId ?? user?.username ?? 'authenticated-user'
-                  }`}
-                />
-              </section>
+          <InventoryList supplies={supplies} onUpdateSupply={editSupply} onDeleteSupply={removeSupply} />
+          <AddSupplyForm onAddSupply={addSupply} />
+        </main>
+      </div>
 
-              <InventoryList supplies={supplies} onUpdateSupply={editSupply} onDeleteSupply={removeSupply} />
-              <AddSupplyForm onAddSupply={addSupply} />
-            </main>
-          </div>
+      <BottomNav />
+    </>
+  );
+}
 
-          <BottomNav />
-        </>
-      )}
+export default function App() {
+  return (
+    <Authenticator components={authenticatorComponents} formFields={authenticatorFormFields}>
+      {({ signOut, user }) => <AuthenticatedDashboard signOut={signOut} user={user} />}
     </Authenticator>
   );
 }
