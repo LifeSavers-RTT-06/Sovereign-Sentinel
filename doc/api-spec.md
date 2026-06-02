@@ -95,6 +95,52 @@ This document serves as the single source of truth for the PrepTrack backend app
 
 ---
 
+## 👥 Household Profile Endpoints
+
+### 1. Fetch Household Profile
+*   **Method**: `GET`
+*   **Route**: `/profile`
+*   **Description**: Returns the household profile for the authenticated Cognito user. The backend scopes the lookup by the Cognito `sub` from the API Gateway authorizer claims.
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "userId": "cognito-sub-uuid",
+      "householdName": "My Household",
+      "householdSize": 4,
+      "preparednessGoalDays": 30,
+      "updatedAt": "2026-06-02T12:00:00.000Z"
+    }
+    ```
+*   **No Profile Yet (`200 OK`)**:
+    ```json
+    null
+    ```
+
+### 2. Create or Update Household Profile
+*   **Method**: `PUT`
+*   **Route**: `/profile`
+*   **Description**: Creates or replaces the authenticated user's household profile. The caller cannot provide `userId`; the backend always uses the Cognito `sub`.
+*   **Request Body**:
+    ```json
+    {
+      "householdName": "My Household",
+      "householdSize": 4,
+      "preparednessGoalDays": 30
+    }
+    ```
+*   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "userId": "cognito-sub-uuid",
+      "householdName": "My Household",
+      "householdSize": 4,
+      "preparednessGoalDays": 30,
+      "updatedAt": "2026-06-02T12:00:00.000Z"
+    }
+    ```
+
+---
+
 ## 🛑 Application Error Responses
 
 ### `400 Bad Request`

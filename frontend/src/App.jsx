@@ -313,11 +313,7 @@ function AuthenticatedDashboard({ signOut, user }) {
             {isLoadingSupplies && <div className="panel loading-panel">Loading supplies…</div>}
             <AlertBanner urgentCount={urgentSupplyCount} />
             <SummaryCards supplies={supplies} urgentSupplyCount={urgentSupplyCount} />
-            <HouseholdProfile
-              storageKey={`sovereign-sentinel:household-profile:${
-                user?.userId ?? user?.username ?? 'authenticated-user'
-              }`}
-            />
+            <HouseholdProfile authenticatedUserKey={authenticatedUserKey} />
           </section>
 
           <InventoryList supplies={supplies} onUpdateSupply={editSupply} onDeleteSupply={removeSupply} />

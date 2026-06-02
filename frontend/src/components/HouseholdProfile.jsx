@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AuthSessionNotReadyError, getProfile, updateProfile } from '../api/suppliesApi.js';
 
 const defaultProfile = {
   householdName: 'My Household',
@@ -8,10 +9,12 @@ const defaultProfile = {
 
 function normalizeProfile(profile) {
   return {
+    userId: profile?.userId,
     householdName: profile?.householdName ?? defaultProfile.householdName,
     householdSize: Number(profile?.householdSize) || defaultProfile.householdSize,
     preparednessGoalDays:
       Number(profile?.preparednessGoalDays) || defaultProfile.preparednessGoalDays,
+    updatedAt: profile?.updatedAt,
   };
 }
 
@@ -28,52 +31,114 @@ function getInitialForm(profile) {
 function validatePositiveNumber(value, label) {
   const parsedValue = Number(value);
 
-  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-    return `${label} must be a positive number.`;
+  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+    return `${label} must be a positive whole number.`;
   }
 
   return '';
 }
 
-export default function HouseholdProfile({ storageKey }) {
+function isProfileEmpty(profile) {
+  if (!profile || Object.keys(profile).length === 0) {
+    return true;
+  }
+
+  return !profile.householdName && !profile.householdSize && !profile.preparednessGoalDays;
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
+
+export default function HouseholdProfile({ authenticatedUserKey }) {
   const [profile, setProfile] = useState(defaultProfile);
   const [form, setForm] = useState(getInitialForm(defaultProfile));
   const [hasSavedProfile, setHasSavedProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSetupPromptDismissed, setIsSetupPromptDismissed] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    if (!storageKey) {
-      return;
-    }
+    let isCurrentLoad = true;
 
-    try {
-      // TODO: Replace this temporary localStorage fallback with GET /profile once the backend route exists.
-      const savedProfile = window.localStorage.getItem(storageKey);
-
-      if (!savedProfile) {
+    const loadProfile = async () => {
+      if (!authenticatedUserKey) {
         setProfile(defaultProfile);
         setForm(getInitialForm(defaultProfile));
         setHasSavedProfile(false);
+        setIsLoadingProfile(true);
         return;
       }
 
-      const parsedProfile = normalizeProfile(JSON.parse(savedProfile));
-      setProfile(parsedProfile);
-      setForm(getInitialForm(parsedProfile));
-      setHasSavedProfile(true);
-    } catch (error) {
-      console.error('Failed to load household profile:', error);
-      setProfile(defaultProfile);
-      setForm(getInitialForm(defaultProfile));
-      setHasSavedProfile(false);
-      setMessage({
-        type: 'error',
-        text: 'Unable to load your saved household profile on this device.',
-      });
-    }
-  }, [storageKey]);
+      setIsLoadingProfile(true);
+      setMessage({ type: '', text: '' });
+
+      try {
+        let savedProfile;
+
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            savedProfile = await getProfile();
+            break;
+          } catch (error) {
+            if (error instanceof AuthSessionNotReadyError && attempt === 0) {
+              await delay(600);
+              continue;
+            }
+
+            throw error;
+          }
+        }
+
+        if (!isCurrentLoad) {
+          return;
+        }
+
+        if (isProfileEmpty(savedProfile)) {
+          setProfile(defaultProfile);
+          setForm(getInitialForm(defaultProfile));
+          setHasSavedProfile(false);
+          setIsSetupPromptDismissed(false);
+          setIsLoadingProfile(false);
+          return;
+        }
+
+        const parsedProfile = normalizeProfile(savedProfile);
+        setProfile(parsedProfile);
+        setForm(getInitialForm(parsedProfile));
+        setHasSavedProfile(true);
+        setIsSetupPromptDismissed(false);
+        setIsLoadingProfile(false);
+      } catch (error) {
+        if (!isCurrentLoad) {
+          return;
+        }
+
+        console.error('Failed to load household profile:', error);
+        setProfile(defaultProfile);
+        setForm(getInitialForm(defaultProfile));
+        setHasSavedProfile(false);
+        setIsLoadingProfile(false);
+        setMessage({
+          type: 'error',
+          text:
+            error instanceof AuthSessionNotReadyError
+              ? 'Finishing sign-in before loading your household profile…'
+              : 'Unable to load your saved household profile right now. Defaults are shown until the profile API is available.',
+        });
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isCurrentLoad = false;
+    };
+  }, [authenticatedUserKey]);
 
   const updateField = (field, value) => {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -99,7 +164,7 @@ export default function HouseholdProfile({ storageKey }) {
     });
   };
 
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
 
     const householdSizeError = validatePositiveNumber(form.householdSize, 'Household size');
@@ -119,24 +184,29 @@ export default function HouseholdProfile({ storageKey }) {
       preparednessGoalDays: Number(form.preparednessGoalDays),
     };
 
+    setIsSavingProfile(true);
+    setMessage({ type: '', text: '' });
+
     try {
-      // TODO: Replace this temporary localStorage fallback with PUT /profile once the backend route exists.
-      window.localStorage.setItem(storageKey, JSON.stringify(updatedProfile));
-      setProfile(normalizeProfile(updatedProfile));
-      setForm(getInitialForm(updatedProfile));
+      const savedProfile = await updateProfile(updatedProfile);
+      const normalizedSavedProfile = normalizeProfile(savedProfile ?? updatedProfile);
+      setProfile(normalizedSavedProfile);
+      setForm(getInitialForm(normalizedSavedProfile));
       setHasSavedProfile(true);
       setIsSetupPromptDismissed(false);
       setIsEditing(false);
       setMessage({
         type: 'success',
-        text: 'Household profile saved on this device.',
+        text: 'Household profile saved and synced to your account.',
       });
     } catch (error) {
       console.error('Failed to save household profile:', error);
       setMessage({
         type: 'error',
-        text: 'Unable to save your household profile on this device. Please try again.',
+        text: `Unable to save your household profile to your account: ${error.message}`,
       });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -162,7 +232,7 @@ export default function HouseholdProfile({ storageKey }) {
           <p className="eyebrow">Household</p>
           <h2 id="profile-heading">Household Profile</h2>
           <p className="section-description profile-description">
-            Keep key planning details close to your inventory dashboard.
+            Keep key planning details synced to your authenticated account.
           </p>
         </div>
 
@@ -171,13 +241,16 @@ export default function HouseholdProfile({ storageKey }) {
             type="button"
             className="secondary-button profile-edit-button"
             onClick={handleStartEdit}
+            disabled={isLoadingProfile}
           >
             Edit
           </button>
         )}
       </div>
 
-      {!hasSavedProfile && !isSetupPromptDismissed && !isEditing && (
+      {isLoadingProfile && <div className="loading-panel">Loading household profile…</div>}
+
+      {!isLoadingProfile && !hasSavedProfile && !isSetupPromptDismissed && !isEditing && (
         <div className="setup-prompt" role="status">
           <div>
             <strong>Set up your household profile</strong>
@@ -216,6 +289,7 @@ export default function HouseholdProfile({ storageKey }) {
               placeholder="My Household"
               value={form.householdName}
               onChange={(event) => updateField('householdName', event.target.value)}
+              disabled={isSavingProfile}
             />
           </div>
 
@@ -230,6 +304,7 @@ export default function HouseholdProfile({ storageKey }) {
                 className="mobile-input"
                 value={form.householdSize}
                 onChange={(event) => updateField('householdSize', event.target.value)}
+                disabled={isSavingProfile}
               />
             </div>
 
@@ -243,15 +318,21 @@ export default function HouseholdProfile({ storageKey }) {
                 className="mobile-input"
                 value={form.preparednessGoalDays}
                 onChange={(event) => updateField('preparednessGoalDays', event.target.value)}
+                disabled={isSavingProfile}
               />
             </div>
           </div>
 
           <div className="profile-form-actions">
-            <button type="submit" className="primary-button">
-              Save
+            <button type="submit" className="primary-button" disabled={isSavingProfile}>
+              {isSavingProfile ? 'Saving…' : 'Save'}
             </button>
-            <button type="button" className="ghost-button" onClick={handleCancel}>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={handleCancel}
+              disabled={isSavingProfile}
+            >
               Cancel
             </button>
           </div>
@@ -268,7 +349,7 @@ export default function HouseholdProfile({ storageKey }) {
       )}
 
       <p className="profile-storage-note">
-        Profile data is temporarily saved locally until the planned authenticated profile API is available.
+        Profile data is saved to your authenticated cloud profile and follows this Cognito user across devices.
       </p>
     </section>
   );
