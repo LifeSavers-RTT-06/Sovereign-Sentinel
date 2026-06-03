@@ -125,6 +125,7 @@ export async function updateProfile(profile) {
     householdName: profile.householdName,
     householdSize: profile.householdSize,
     preparednessGoalDays: profile.preparednessGoalDays,
+    expiryAlertsEnabled: profile.expiryAlertsEnabled,
   };
 
   return apiRequest('/profile', {
