@@ -7,24 +7,35 @@ const defaultProfile = {
   preparednessGoalDays: 14,
 };
 
-function normalizeProfile(profile) {
+function toPositiveInteger(value) {
+  const parsedValue = Number(value);
+
+  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : undefined;
+}
+
+function normalizeProfile(profile, { useDefaults = false } = {}) {
+  const householdSize = toPositiveInteger(profile?.householdSize);
+  const preparednessGoalDays = toPositiveInteger(profile?.preparednessGoalDays);
+
   return {
     userId: profile?.userId,
-    householdName: profile?.householdName ?? defaultProfile.householdName,
-    householdSize: Number(profile?.householdSize) || defaultProfile.householdSize,
+    householdName: profile?.householdName ?? (useDefaults ? defaultProfile.householdName : ''),
+    householdSize: householdSize ?? (useDefaults ? defaultProfile.householdSize : undefined),
     preparednessGoalDays:
-      Number(profile?.preparednessGoalDays) || defaultProfile.preparednessGoalDays,
+      preparednessGoalDays ?? (useDefaults ? defaultProfile.preparednessGoalDays : undefined),
     updatedAt: profile?.updatedAt,
   };
 }
 
-function getInitialForm(profile) {
-  const normalizedProfile = normalizeProfile(profile);
+function getInitialForm(profile, { useDefaults = false } = {}) {
+  const normalizedProfile = normalizeProfile(profile, { useDefaults });
 
   return {
     householdName: normalizedProfile.householdName,
-    householdSize: String(normalizedProfile.householdSize),
-    preparednessGoalDays: String(normalizedProfile.preparednessGoalDays),
+    householdSize: normalizedProfile.householdSize ? String(normalizedProfile.householdSize) : '',
+    preparednessGoalDays: normalizedProfile.preparednessGoalDays
+      ? String(normalizedProfile.preparednessGoalDays)
+      : '',
   };
 }
 
@@ -46,6 +57,42 @@ function isProfileEmpty(profile) {
   return !profile.householdName && !profile.householdSize && !profile.preparednessGoalDays;
 }
 
+function getProfileFromApiResponse(response) {
+  if (response?.exists === false) {
+    return { exists: false, profile: null };
+  }
+
+  if (response?.exists === true) {
+    return { exists: true, profile: response.profile ?? null };
+  }
+
+  if (response && typeof response === 'object' && 'profile' in response) {
+    return { exists: Boolean(response.profile), profile: response.profile ?? null };
+  }
+
+  if (!isProfileEmpty(response)) {
+    return { exists: true, profile: response };
+  }
+
+  return { exists: false, profile: null };
+}
+
+function formatHouseholdSize(value) {
+  const householdSize = toPositiveInteger(value);
+
+  if (!householdSize) {
+    return 'Not set yet';
+  }
+
+  return `${householdSize} ${householdSize === 1 ? 'person' : 'people'}`;
+}
+
+function formatPreparednessGoal(value) {
+  const preparednessGoalDays = toPositiveInteger(value);
+
+  return preparednessGoalDays ? `${preparednessGoalDays} days` : 'Not set yet';
+}
+
 function delay(milliseconds) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, milliseconds);
@@ -53,8 +100,8 @@ function delay(milliseconds) {
 }
 
 export default function HouseholdProfile({ authenticatedUserKey }) {
-  const [profile, setProfile] = useState(defaultProfile);
-  const [form, setForm] = useState(getInitialForm(defaultProfile));
+  const [profile, setProfile] = useState(() => normalizeProfile());
+  const [form, setForm] = useState(() => getInitialForm(defaultProfile, { useDefaults: true }));
   const [hasSavedProfile, setHasSavedProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -67,8 +114,8 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
 
     const loadProfile = async () => {
       if (!authenticatedUserKey) {
-        setProfile(defaultProfile);
-        setForm(getInitialForm(defaultProfile));
+        setProfile(normalizeProfile(defaultProfile, { useDefaults: true }));
+        setForm(getInitialForm(defaultProfile, { useDefaults: true }));
         setHasSavedProfile(false);
         setIsLoadingProfile(true);
         return;
@@ -98,16 +145,19 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
           return;
         }
 
-        if (isProfileEmpty(savedProfile)) {
-          setProfile(defaultProfile);
-          setForm(getInitialForm(defaultProfile));
+        const profileResponse = getProfileFromApiResponse(savedProfile);
+
+        if (!profileResponse.exists) {
+          const initialProfile = normalizeProfile(defaultProfile, { useDefaults: true });
+          setProfile(initialProfile);
+          setForm(getInitialForm(initialProfile, { useDefaults: true }));
           setHasSavedProfile(false);
           setIsSetupPromptDismissed(false);
           setIsLoadingProfile(false);
           return;
         }
 
-        const parsedProfile = normalizeProfile(savedProfile);
+        const parsedProfile = normalizeProfile(profileResponse.profile);
         setProfile(parsedProfile);
         setForm(getInitialForm(parsedProfile));
         setHasSavedProfile(true);
@@ -119,8 +169,8 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
         }
 
         console.error('Failed to load household profile:', error);
-        setProfile(defaultProfile);
-        setForm(getInitialForm(defaultProfile));
+        setProfile(normalizeProfile());
+        setForm(getInitialForm(defaultProfile, { useDefaults: true }));
         setHasSavedProfile(false);
         setIsLoadingProfile(false);
         setMessage({
@@ -128,7 +178,7 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
           text:
             error instanceof AuthSessionNotReadyError
               ? 'Finishing sign-in before loading your household profile…'
-              : 'Unable to load your saved household profile right now. Defaults are shown until the profile API is available.',
+              : 'Unable to load your saved household profile right now. Please try refreshing in a moment.',
         });
       }
     };
@@ -189,7 +239,13 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
 
     try {
       const savedProfile = await updateProfile(updatedProfile);
-      const normalizedSavedProfile = normalizeProfile(savedProfile ?? updatedProfile);
+      const profileResponse = getProfileFromApiResponse(savedProfile);
+
+      if (!profileResponse.profile) {
+        throw new Error('The profile API did not return the saved profile.');
+      }
+
+      const normalizedSavedProfile = normalizeProfile(profileResponse.profile);
       setProfile(normalizedSavedProfile);
       setForm(getInitialForm(normalizedSavedProfile));
       setHasSavedProfile(true);
@@ -217,11 +273,11 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
     },
     {
       label: 'Household Size',
-      value: `${profile.householdSize} ${profile.householdSize === 1 ? 'person' : 'people'}`,
+      value: formatHouseholdSize(profile.householdSize),
     },
     {
       label: 'Preparedness Goal',
-      value: `${profile.preparednessGoalDays} days`,
+      value: formatPreparednessGoal(profile.preparednessGoalDays),
     },
   ];
 
@@ -278,7 +334,7 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
         </div>
       )}
 
-      {isEditing ? (
+      {!isLoadingProfile && isEditing ? (
         <form className="profile-form" onSubmit={handleSave}>
           <div>
             <label htmlFor="household-name">Household Name</label>
@@ -338,14 +394,16 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
           </div>
         </form>
       ) : (
-        <div className="profile-grid">
-          {profileDetails.map((detail) => (
-            <article className="profile-card" key={detail.label}>
-              <p>{detail.label}</p>
-              <strong>{detail.value}</strong>
-            </article>
-          ))}
-        </div>
+        !isLoadingProfile && (
+          <div className="profile-grid">
+            {profileDetails.map((detail) => (
+              <article className="profile-card" key={detail.label}>
+                <p>{detail.label}</p>
+                <strong>{detail.value}</strong>
+              </article>
+            ))}
+          </div>
+        )
       )}
 
       <p className="profile-storage-note">
