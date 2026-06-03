@@ -37,11 +37,13 @@ async function getAuthToken() {
 }
 
 async function apiRequest(path, options = {}) {
+  const { headers: requestHeaders = {}, ...requestOptions } = options;
+
   if (!API_BASE_URL) {
     throw new Error('VITE_API_BASE_URL is not configured.');
   }
 
-  const method = options.method ?? 'GET';
+  const method = requestOptions.method ?? 'GET';
   const token = await getAuthToken();
   const shouldLogRequest = method === 'GET' && ['/supplies', '/profile'].includes(path);
 
@@ -51,12 +53,12 @@ async function apiRequest(path, options = {}) {
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
       headers: {
+        ...requestHeaders,
         Authorization: token,
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(options.headers ?? {}),
+        ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
       },
-      ...options,
     });
 
     const responseText = await response.text();
@@ -119,8 +121,14 @@ export async function getProfile() {
 }
 
 export async function updateProfile(profile) {
+  const profilePayload = {
+    householdName: profile.householdName,
+    householdSize: profile.householdSize,
+    preparednessGoalDays: profile.preparednessGoalDays,
+  };
+
   return apiRequest('/profile', {
     method: 'PUT',
-    body: JSON.stringify(profile),
+    body: JSON.stringify(profilePayload),
   });
 }
