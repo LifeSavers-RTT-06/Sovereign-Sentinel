@@ -10,8 +10,11 @@ Parameters:
     Description: Existing Cognito authorizer ID attached to the API Gateway API.
   ProfilesTableName:
     Type: String
-    Default: SovereignSentinelProfiles
+    Default: SS_Household
     Description: DynamoDB table name for Cognito-scoped household profiles.
+  ExpiryAlertsTopicArn:
+    Type: String
+    Description: Existing SNS topic ARN used by the expiry scanner for user-filtered alert emails.
   AllowedOrigin:
     Type: String
     Default: '*'
@@ -32,9 +35,13 @@ Resources:
       AttributeDefinitions:
         - AttributeName: userId
           AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
       KeySchema:
         - AttributeName: userId
           KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
 
   ProfileLambdaRole:
     Type: AWS::IAM::Role
@@ -58,6 +65,15 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
                 Resource: !GetAtt ProfilesTable.Arn
+        - PolicyName: ExpiryAlertSnsSubscriptionManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Subscribe
+                  - sns:SetSubscriptionAttributes
+                Resource: !Ref ExpiryAlertsTopicArn
 
   ProfileLambda:
     Type: AWS::Lambda::Function
@@ -71,8 +87,9 @@ Resources:
         S3Key: !Ref ProfileLambdaCodeS3Key
       Environment:
         Variables:
-          PROFILES_TABLE_NAME: !Ref ProfilesTable
+          HOUSEHOLD_TABLE: !Ref ProfilesTable
           ALLOWED_ORIGIN: !Ref AllowedOrigin
+          SNS_TOPIC_ARN: !Ref ExpiryAlertsTopicArn
 
   ProfileIntegration:
     Type: AWS::ApiGatewayV2::Integration

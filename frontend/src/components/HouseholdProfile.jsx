@@ -5,6 +5,7 @@ const defaultProfile = {
   householdName: 'My Household',
   householdSize: 1,
   preparednessGoalDays: 14,
+  expiryAlertsEnabled: false,
 };
 
 function toPositiveInteger(value) {
@@ -23,6 +24,8 @@ function normalizeProfile(profile, { useDefaults = false } = {}) {
     householdSize: householdSize ?? (useDefaults ? defaultProfile.householdSize : undefined),
     preparednessGoalDays:
       preparednessGoalDays ?? (useDefaults ? defaultProfile.preparednessGoalDays : undefined),
+    expiryAlertsEnabled: profile?.expiryAlertsEnabled === true,
+    notificationEmail: profile?.notificationEmail,
     updatedAt: profile?.updatedAt,
   };
 }
@@ -36,6 +39,7 @@ function getInitialForm(profile, { useDefaults = false } = {}) {
     preparednessGoalDays: normalizedProfile.preparednessGoalDays
       ? String(normalizedProfile.preparednessGoalDays)
       : '',
+    expiryAlertsEnabled: normalizedProfile.expiryAlertsEnabled,
   };
 }
 
@@ -232,6 +236,7 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
       householdName: form.householdName.trim(),
       householdSize: Number(form.householdSize),
       preparednessGoalDays: Number(form.preparednessGoalDays),
+      expiryAlertsEnabled: form.expiryAlertsEnabled === true,
     };
 
     setIsSavingProfile(true);
@@ -278,6 +283,10 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
     {
       label: 'Preparedness Goal',
       value: formatPreparednessGoal(profile.preparednessGoalDays),
+    },
+    {
+      label: 'Email Expiry Alerts',
+      value: profile.expiryAlertsEnabled === true ? 'Enabled' : 'Not enabled',
     },
   ];
 
@@ -377,6 +386,22 @@ export default function HouseholdProfile({ authenticatedUserKey }) {
                 disabled={isSavingProfile}
               />
             </div>
+          </div>
+
+          <div className="profile-checkbox-field">
+            <label htmlFor="expiry-alerts-enabled" className="profile-checkbox-label">
+              <input
+                id="expiry-alerts-enabled"
+                type="checkbox"
+                checked={form.expiryAlertsEnabled === true}
+                onChange={(event) => updateField('expiryAlertsEnabled', event.target.checked)}
+                disabled={isSavingProfile}
+              />
+              <span>Email me when supplies are expiring soon</span>
+            </label>
+            <p className="profile-checkbox-help">
+              You may need to confirm a subscription email before alerts can be delivered.
+            </p>
           </div>
 
           <div className="profile-form-actions">
