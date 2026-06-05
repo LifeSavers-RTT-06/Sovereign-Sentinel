@@ -1,6 +1,11 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { SNSClient, SetSubscriptionAttributesCommand, SubscribeCommand } from '@aws-sdk/client-sns';
+import {
+  SNSClient,
+  SetSubscriptionAttributesCommand,
+  SubscribeCommand,
+  UnsubscribeCommand,
+} from '@aws-sdk/client-sns';
 
 const tableName = process.env.HOUSEHOLD_TABLE ?? process.env.PROFILES_TABLE_NAME;
 const snsTopicArn = process.env.SNS_TOPIC_ARN;
@@ -115,10 +120,22 @@ async function getProfile(userId) {
   return jsonResponse(200, { exists: Boolean(profile), profile });
 }
 
+function isConfirmedSubscriptionArn(subscriptionArn) {
+  return (
+    typeof subscriptionArn === 'string' &&
+    subscriptionArn.trim() !== '' &&
+    subscriptionArn.toLowerCase() !== 'pending confirmation'
+  );
+}
+
 function shouldSubscribe(existingProfile, email) {
   return !(
+    existingProfile?.expiryAlertsEnabled === true &&
     existingProfile?.notificationEmail === email &&
-    (existingProfile?.snsSubscriptionArn || existingProfile?.snsSubscriptionStatus)
+    (
+      isConfirmedSubscriptionArn(existingProfile?.snsSubscriptionArn) ||
+      existingProfile?.snsSubscriptionStatus === 'PendingConfirmation'
+    )
   );
 }
 
@@ -154,8 +171,7 @@ async function subscribeToExpiryAlerts(userId, email, existingProfile) {
   );
 
   const subscriptionArn = subscription.SubscriptionArn;
-  const isPendingConfirmation =
-    !subscriptionArn || subscriptionArn.toLowerCase() === 'pending confirmation';
+  const isPendingConfirmation = !isConfirmedSubscriptionArn(subscriptionArn);
 
   if (!isPendingConfirmation) {
     await snsClient.send(
@@ -177,6 +193,25 @@ async function subscribeToExpiryAlerts(userId, email, existingProfile) {
   return isPendingConfirmation
     ? { snsSubscriptionStatus: 'PendingConfirmation' }
     : { snsSubscriptionArn: subscriptionArn, snsSubscriptionStatus: 'Confirmed' };
+}
+
+async function unsubscribeFromExpiryAlerts(existingProfile) {
+  const subscriptionArn = existingProfile?.snsSubscriptionArn;
+
+  if (isConfirmedSubscriptionArn(subscriptionArn)) {
+    try {
+      await snsClient.send(new UnsubscribeCommand({ SubscriptionArn: subscriptionArn }));
+    } catch (error) {
+      if (error?.name !== 'NotFoundException') {
+        throw error;
+      }
+    }
+  }
+
+  return {
+    snsSubscriptionArn: undefined,
+    snsSubscriptionStatus: 'Disabled',
+  };
 }
 
 async function putProfile(userId, email, event) {
@@ -204,11 +239,11 @@ async function putProfile(userId, email, event) {
       return jsonResponse(500, { error: error.message });
     }
   } else {
-    notificationState = {
-      snsSubscriptionArn: existingProfile?.snsSubscriptionArn,
-      snsSubscriptionStatus: existingProfile?.snsSubscriptionStatus,
-      // TODO: Unsubscribe only when we can safely verify this user's current SNS subscription ARN.
-    };
+    try {
+      notificationState = await unsubscribeFromExpiryAlerts(existingProfile);
+    } catch (error) {
+      return jsonResponse(500, { error: error.message });
+    }
   }
 
   const profile = toProfileItem(body, userId, email, notificationState);

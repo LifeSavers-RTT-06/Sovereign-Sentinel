@@ -72,8 +72,14 @@ Resources:
               - Effect: Allow
                 Action:
                   - sns:Subscribe
-                  - sns:SetSubscriptionAttributes
                 Resource: !Ref ExpiryAlertsTopicArn
+              - Effect: Allow
+                Action:
+                  - sns:SetSubscriptionAttributes
+                  - sns:Unsubscribe
+                Resource:
+                  - !Ref ExpiryAlertsTopicArn
+                  - !Sub '${ExpiryAlertsTopicArn}:*'
 
   ProfileLambda:
     Type: AWS::Lambda::Function
