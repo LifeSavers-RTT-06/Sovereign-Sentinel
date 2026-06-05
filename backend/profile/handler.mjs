@@ -130,6 +130,7 @@ function isConfirmedSubscriptionArn(subscriptionArn) {
 
 function shouldSubscribe(existingProfile, email) {
   return !(
+    existingProfile?.expiryAlertsEnabled === true &&
     existingProfile?.notificationEmail === email &&
     (
       isConfirmedSubscriptionArn(existingProfile?.snsSubscriptionArn) ||
