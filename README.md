@@ -9,25 +9,25 @@
 
 ---
 
-## 📌 Executive Summary
+##  Executive Summary
 
 **Sovereign Sentinel** is a serverless AWS emergency supply tracking application designed to enforce strict multi-tenant data isolation. Built as an AWS re/Start capstone project, the system implements defense-in-depth across the network, identity, and authorization layers to guarantee that user data remains isolated at scale.
 
 ---
 
-## 🌐 Project Status & Demonstration
+## Project Status & Demonstration
 
 > **Note on Live Demonstration:**  
 > To optimize cloud resource management and avoid ongoing AWS hosting fees following project completion, active live deployment endpoints have been archived. 
 > 
 > Full application architecture, IAM security configurations, backend Lambda function logic, and verified test execution logs are available directly within this repository:
-> * 📐 **Architecture & Flow:** [Architecture Diagrams](./Architecture_Diagrams/)
-> * 🧪 **Verified Security Test Artifacts:** [Security Testing Logs](./docs/)
-> * ⚙️ **Backend Logic & Lambda Functions:** [Backend Source Code](./Lambda.md)
+> *  **Architecture & Flow:** [Architecture Diagrams](./Architecture_Diagrams/)
+> *  **Verified Security Test Artifacts:** [Security Testing Logs](./docs/)
+> *  **Backend Logic & Lambda Functions:** [Backend Source Code](./Lambda.md)
 
 ---
 
-## 🛠️ System Architecture
+##  System Architecture
 
 ![Sovereign Sentinel Architecture](./Architecture_Diagrams/Architecture_ss.png)
 
@@ -40,7 +40,7 @@
 
 ---
 
-## 🛡️ Security & Hardening Architecture
+##  Security & Hardening Architecture
 
 ### 1. IDOR Prevention Pattern
 Rather than relying on client-supplied parameters in request bodies or query strings, backend Lambda functions extract identity exclusively from validated Cognito JWT claims:
